@@ -116,7 +116,7 @@ function Login() {
         <button type="submit">Login</button>
 
       </form>
-    </div>.
+    </div>
   );
 }
 
