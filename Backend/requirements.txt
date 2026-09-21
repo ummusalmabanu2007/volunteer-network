@@ -3,4 +3,4 @@ uvicorn
 sqlalchemy
 pymysql
 pydantic
-pwdlib
+pwdlib[argon2]
