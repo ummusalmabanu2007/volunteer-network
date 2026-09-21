@@ -29,41 +29,53 @@ function Register() {
     };
 
     try {
-      const response = await fetch(${API_URL}/auth/register, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(registerData),
-      });
+      const response = await fetch(
+        `${API_URL}/auth/register`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(registerData),
+        }
+      );
 
       const data = await response.json();
 
       if (response.ok) {
         alert("Registration successful!");
 
-        setName("");
-        setEmail("");
-        setPhone("");
-        setAddress("");
-        setSkills("");
-        setPassword("");
-        setConfirmPassword("");
+        localStorage.setItem(
+          "volunteer_id",
+          data.volunteer_id
+        );
+
+        localStorage.setItem(
+          "volunteer_name",
+          name
+        );
+
+        window.location.reload();
       } else {
-        alert("Registration failed: " + data.detail);
+        alert(
+          "Registration failed: " +
+          (data.detail || "Something went wrong")
+        );
       }
     } catch (error) {
+      console.error("Registration error:", error);
       alert("Backend connection failed!");
-      console.error(error);
     }
   };
 
   return (
     <div className="login-container">
-      <h2>Volunteer Network</h2>
-      <h3>Volunteer Registration</h3>
+      <h2>Volunteer Community Network</h2>
+
+      <h3>Register</h3>
 
       <form onSubmit={handleRegister}>
+
         <input
           type="text"
           placeholder="Enter Name"
@@ -71,6 +83,9 @@ function Register() {
           onChange={(e) => setName(e.target.value)}
           required
         />
+
+        <br />
+        <br />
 
         <input
           type="email"
@@ -80,6 +95,9 @@ function Register() {
           required
         />
 
+        <br />
+        <br />
+
         <input
           type="text"
           placeholder="Enter Phone"
@@ -87,6 +105,9 @@ function Register() {
           onChange={(e) => setPhone(e.target.value)}
           required
         />
+
+        <br />
+        <br />
 
         <input
           type="text"
@@ -96,6 +117,9 @@ function Register() {
           required
         />
 
+        <br />
+        <br />
+
         <input
           type="text"
           placeholder="Enter Skills"
@@ -103,6 +127,9 @@ function Register() {
           onChange={(e) => setSkills(e.target.value)}
           required
         />
+
+        <br />
+        <br />
 
         <input
           type="password"
@@ -112,6 +139,9 @@ function Register() {
           required
         />
 
+        <br />
+        <br />
+
         <input
           type="password"
           placeholder="Confirm Password"
@@ -120,7 +150,13 @@ function Register() {
           required
         />
 
-        <button type="submit">Register</button>
+        <br />
+        <br />
+
+        <button type="submit">
+          Register
+        </button>
+
       </form>
     </div>
   );

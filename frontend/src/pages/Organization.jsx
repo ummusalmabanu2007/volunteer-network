@@ -7,7 +7,7 @@ function Organization() {
   const organizationId = localStorage.getItem("organization_id");
 
   useEffect(() => {
-    fetch("http://127.0.0.1:8001/events/")
+    fetch("https://volunteer-network-production-ec87.up.railway.app/events/")
       .then((response) => response.json())
       .then((data) => {
         const myEvents = data.filter(

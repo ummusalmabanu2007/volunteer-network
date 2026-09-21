@@ -7,7 +7,7 @@ function VolunteerDashboard() {
   const [applicationLoading, setApplicationLoading] = useState(true);
 
   useEffect(() => {
-    fetch("http://127.0.0.1:8001/events/")
+    fetch("https://volunteer-network-production-ec87.up.railway.app/events/")
       .then((response) => response.json())
       .then((data) => {
         setEvents(data);
@@ -22,7 +22,7 @@ function VolunteerDashboard() {
   useEffect(() => {
     const volunteerId = localStorage.getItem("volunteer_id");
 
-    fetch("http://127.0.0.1:8001/applications/")
+    fetch("https://volunteer-network-production-ec87.up.railway.app/applications/")
       .then((response) => response.json())
       .then((data) => {
         const myApplications = data.filter(
@@ -55,7 +55,7 @@ function VolunteerDashboard() {
 
     try {
       const response = await fetch(
-        "http://127.0.0.1:8001/applications/",
+        "https://volunteer-network-production-ec87.up.railway.app/applications/",
         {
           method: "POST",
           headers: {

@@ -19,7 +19,7 @@ function Event() {
 
     try {
       const response = await fetch(
-        "http://127.0.0.1:8001/events/",
+        "https://volunteer-network-production-ec87.up.railway.app/events/",
         {
           method: "POST",
           headers: {

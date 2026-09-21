@@ -11,11 +11,11 @@ function Login() {
     let loginUrl = "";
 
     if (role === "volunteer") {
-      loginUrl = "http://127.0.0.1:8001/auth/login";
+      loginUrl = "https://volunteer-network-production-ec87.up.railway.app/auth/login";
     } else if (role === "organization") {
-      loginUrl = "http://127.0.0.1:8001/auth/organization-login";
+      loginUrl = "https://volunteer-network-production-ec87.up.railway.app/auth/organization-login";
     } else if (role === "admin") {
-      loginUrl = "http://127.0.0.1:8001/auth/admin-login";
+      loginUrl = "https://volunteer-network-production-ec87.up.railway.app/auth/admin-login";
     }
 
     try {
@@ -45,6 +45,7 @@ function Login() {
             "organization_id",
             data.organization_id
           );
+
           localStorage.setItem(
             "organization_name",
             data.name
@@ -56,7 +57,7 @@ function Login() {
           localStorage.setItem("admin_name", data.name);
         }
 
-        window.location.reload();
+        window.location.href = "/";
       } else {
         alert("Login failed: " + data.detail);
       }
@@ -68,6 +69,7 @@ function Login() {
 
   return (
     <div className="login-container">
+
       <h2>Volunteer Community Network</h2>
 
       <h3>Login</h3>
@@ -113,9 +115,24 @@ function Login() {
         <br />
         <br />
 
-        <button type="submit">Login</button>
+        <button type="submit">
+          Login
+        </button>
 
       </form>
+
+      <p>
+        Don't have an account?{" "}
+        <button
+          type="button"
+          onClick={() => {
+            window.location.href = "/register";
+          }}
+        >
+          Register
+        </button>
+      </p>
+
     </div>
   );
 }

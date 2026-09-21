@@ -7,22 +7,22 @@ function AdminDashboard() {
   const [applications, setApplications] = useState([]);
 
   useEffect(() => {
-    fetch("http://127.0.0.1:8001/volunteers/")
+    fetch("https://volunteer-network-production-ec87.up.railway.app/volunteers/")
       .then((response) => response.json())
       .then((data) => setVolunteers(data))
       .catch((error) => console.error("Volunteer error:", error));
 
-    fetch("http://127.0.0.1:8001/organizations/")
+    fetch("https://volunteer-network-production-ec87.up.railway.app/organizations/")
       .then((response) => response.json())
       .then((data) => setOrganizations(data))
       .catch((error) => console.error("Organization error:", error));
 
-    fetch("http://127.0.0.1:8001/events/")
+    fetch("https://volunteer-network-production-ec87.up.railway.app/events/")
       .then((response) => response.json())
       .then((data) => setEvents(data))
       .catch((error) => console.error("Event error:", error));
 
-    fetch("http://127.0.0.1:8001/applications/")
+    fetch("https://volunteer-network-production-ec87.up.railway.app/applications/")
       .then((response) => response.json())
       .then((data) => setApplications(data))
       .catch((error) => console.error("Application error:", error));

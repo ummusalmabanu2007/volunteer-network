@@ -1,3 +1,3 @@
-const API_URL = "http://127.0.0.1:8001";
+const API_URL = "https://volunteer-network-production-ec87.up.railway.app";
 
 export default API_URL;
