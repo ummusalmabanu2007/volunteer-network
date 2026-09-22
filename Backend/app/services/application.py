@@ -1,5 +1,8 @@
+from fastapi import HTTPException
 from sqlalchemy.orm import Session
+
 from app.models.application import Application
+from app.models.event import Event
 
 
 def get_applications(db: Session):
@@ -13,6 +16,53 @@ def get_application(db: Session, application_id: int):
 
 
 def create_application(db: Session, application):
+    # Check duplicate application
+    existing_application = db.query(Application).filter(
+        Application.Volunteer_ID == application.Volunteer_ID,
+        Application.Event_ID == application.Event_ID
+    ).first()
+
+    if existing_application:
+        raise HTTPException(
+            status_code=400,
+            detail="Volunteer has already applied for this event"
+        )
+
+    # Get event
+    event = db.query(Event).filter(
+        Event.id== application.Event_ID
+    ).first()
+
+    if not event:
+        raise HTTPException(
+            status_code=404,
+            detail="Event not found"
+        )
+
+    # Check completed event
+    if event.Status == "Completed":
+        raise HTTPException(
+            status_code=400,
+            detail="Event is completed"
+        )
+
+    # Count current applications
+    application_count = db.query(Application).filter(
+        Application.Event_ID == application.Event_ID
+    ).count()
+
+    # Check maximum volunteers
+    if event.Maximum_Volunteers is not None:
+        if application_count >= event.Maximum_Volunteers:
+            event.Status = "Full"
+            db.commit()
+
+            raise HTTPException(
+                status_code=400,
+                detail="Event Full"
+            )
+
+    # Create application
     new_application = Application(
         Volunteer_ID=application.Volunteer_ID,
         Event_ID=application.Event_ID,
@@ -21,6 +71,14 @@ def create_application(db: Session, application):
     )
 
     db.add(new_application)
+
+    # Update event status
+    if event.Maximum_Volunteers is not None:
+        if application_count + 1 >= event.Maximum_Volunteers:
+            event.Status = "Full"
+        else:
+            event.Status = "Available"
+
     db.commit()
     db.refresh(new_application)
 

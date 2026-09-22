@@ -11,3 +11,5 @@ class Event(Base):
     Location = Column(String(255))
     Description = Column(String(500))
     Organization_ID = Column(Integer)
+    Maximum_Volunteers = Column(Integer)
+    Status = Column(String(20), nullable=False, default="Available")

@@ -77,12 +77,12 @@ function VolunteerDashboard() {
           data,
         ]);
       } else {
-        alert("Application failed: " + data.detail);
+        alert(data.detail || "Application failed");
       }
     } catch (error) {
       console.error("Application error:", error);
       alert("Backend connection failed!");
-    }
+    } 
   };
 
   const handleLogout = () => {

@@ -4,6 +4,7 @@ function Event() {
   const [eventName, setEventName] = useState("");
   const [date, setDate] = useState("");
   const [location, setLocation] = useState("");
+  const [maximumVolunteers, setMaximumVolunteers] = useState("");
   const [description, setDescription] = useState("");
 
   const handleCreateEvent = async (e) => {
@@ -16,6 +17,7 @@ function Event() {
       Event_Name: eventName,
       Date: date,
       Location: location,
+      Maximum_Volunteers: Number(maximumVolunteers),
       Description: description,
       Organization_ID: Number(organizationId),
     };
@@ -40,6 +42,7 @@ function Event() {
         setEventName("");
         setDate("");
         setLocation("");
+        setMaximumVolunteers("");
         setDescription("");
       } else {
         alert(
@@ -91,6 +94,18 @@ function Event() {
         <br />
 
         <input
+          type="number"
+          placeholder="Maximum Volunteers"
+          value={maximumVolunteers}
+          onChange={(e) => setMaximumVolunteers(e.target.value)}
+          min="1"
+          required
+        />
+
+        <br />
+        <br />
+
+        <input
           type="text"
           placeholder="Enter Description"
           value={description}
@@ -108,4 +123,4 @@ function Event() {
     </div>
   );
 }
-export default Event;  
+export default Event;

@@ -8,6 +8,8 @@ class EventCreate(BaseModel):
     Location: str | None = None
     Description: str | None = None
     Organization_ID: int | None = None
+    Maximum_Volunteers: int | None = None
+    Status: str | None = "Available"
 
 
 class EventResponse(EventCreate):

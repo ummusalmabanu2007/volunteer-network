@@ -1,5 +1,6 @@
 from sqlalchemy.orm import Session
 from app.models.event import Event
+from app.models.application import Application
 
 
 def get_events(db: Session):
@@ -18,11 +19,15 @@ def create_event(db: Session, event):
         Date=event.Date,
         Location=event.Location,
         Description=event.Description,
-        Organization_ID=event.Organization_ID
+        Organization_ID=event.Organization_ID,
+        Maximum_Volunteers=event.Maximum_Volunteers,
+        Status="Available"
     )
+
     db.add(db_event)
     db.commit()
     db.refresh(db_event)
+
     return db_event
 
 
@@ -39,6 +44,17 @@ def update_event(db: Session, event_id: int, event):
     db_event.Location = event.Location
     db_event.Description = event.Description
     db_event.Organization_ID = event.Organization_ID
+    db_event.Maximum_Volunteers = event.Maximum_Volunteers
+
+    application_count = db.query(Application).filter(
+        Application.Event_ID == event_id
+    ).count()
+
+    if db_event.Maximum_Volunteers is not None:
+        if application_count >= db_event.Maximum_Volunteers:
+            db_event.Status = "Full"
+        else:
+            db_event.Status = "Available"
 
     db.commit()
     db.refresh(db_event)
