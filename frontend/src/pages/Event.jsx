@@ -9,12 +9,15 @@ function Event() {
   const handleCreateEvent = async (e) => {
     e.preventDefault();
 
+    const organizationId =
+      localStorage.getItem("organization_id");
+
     const eventData = {
       Event_Name: eventName,
       Date: date,
       Location: location,
       Description: description,
-      Organization_ID: 1,
+      Organization_ID: Number(organizationId),
     };
 
     try {
@@ -38,10 +41,11 @@ function Event() {
         setDate("");
         setLocation("");
         setDescription("");
-
-        console.log("Event response:", data);
       } else {
-        alert("Event creation failed: " + data.detail);
+        alert(
+          "Event creation failed: " +
+            (data.detail || "Unknown error")
+        );
       }
     } catch (error) {
       console.error("Event error:", error);
@@ -62,7 +66,8 @@ function Event() {
           required
         />
 
-        <br /><br />
+        <br />
+        <br />
 
         <input
           type="date"
@@ -71,7 +76,8 @@ function Event() {
           required
         />
 
-        <br /><br />
+        <br />
+        <br />
 
         <input
           type="text"
@@ -81,7 +87,8 @@ function Event() {
           required
         />
 
-        <br /><br />
+        <br />
+        <br />
 
         <input
           type="text"
@@ -91,12 +98,14 @@ function Event() {
           required
         />
 
-        <br /><br />
+        <br />
+        <br />
 
-        <button type="submit">Create Event</button>
+        <button type="submit">
+          Create Event
+        </button>
       </form>
     </div>
   );
 }
-
-export default Event;
+export default Event;  
