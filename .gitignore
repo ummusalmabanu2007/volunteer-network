@@ -219,3 +219,6 @@ __marimo__/
 # Frontend
 node_modules/
 dist/
+*.sql
+railway_dat
+railway_data
