@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import Event from "./Event";
-
-   const API_URL = "http://127.0.0.1:8001";
+   const API_URL = "https://volunteer-network-production-5388.up.railway.app";
 
 function Organization() {
   const [events, setEvents] = useState([]);
