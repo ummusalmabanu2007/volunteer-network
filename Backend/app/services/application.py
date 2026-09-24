@@ -1,6 +1,5 @@
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
-
 from app.models.application import Application
 from app.models.event import Event
 
@@ -16,6 +15,7 @@ def get_application(db: Session, application_id: int):
 
 
 def create_application(db: Session, application):
+
     # Check duplicate application
     existing_application = db.query(Application).filter(
         Application.Volunteer_ID == application.Volunteer_ID,
@@ -28,9 +28,9 @@ def create_application(db: Session, application):
             detail="Volunteer has already applied for this event"
         )
 
-    # Get event
+    # Find event
     event = db.query(Event).filter(
-        Event.id== application.Event_ID
+        Event.id == application.Event_ID
     ).first()
 
     if not event:
@@ -39,20 +39,21 @@ def create_application(db: Session, application):
             detail="Event not found"
         )
 
-    # Check completed event
+    # Completed event cannot be applied
     if event.Status == "Completed":
         raise HTTPException(
             status_code=400,
             detail="Event is completed"
         )
 
-    # Count current applications
+    # Count applications
     application_count = db.query(Application).filter(
         Application.Event_ID == application.Event_ID
     ).count()
 
     # Check maximum volunteers
     if event.Maximum_Volunteers is not None:
+
         if application_count >= event.Maximum_Volunteers:
             event.Status = "Full"
             db.commit()
@@ -74,6 +75,7 @@ def create_application(db: Session, application):
 
     # Update event status
     if event.Maximum_Volunteers is not None:
+
         if application_count + 1 >= event.Maximum_Volunteers:
             event.Status = "Full"
         else:
@@ -85,34 +87,56 @@ def create_application(db: Session, application):
     return new_application
 
 
-def update_application(db: Session, application_id: int, application):
-    db_application = db.query(Application).filter(
-        Application.Application_ID == application_id
+# Cancel Application
+def cancel_application(
+    db: Session,
+    application_id: int,
+    volunteer_id: int
+):
+
+    application = db.query(Application).filter(
+        Application.Application_ID == application_id,
+        Application.Volunteer_ID == volunteer_id
     ).first()
 
-    if not db_application:
-        return None
+    if not application:
+        raise HTTPException(
+            status_code=404,
+            detail="Application not found"
+        )
 
-    db_application.Volunteer_ID = application.Volunteer_ID
-    db_application.Event_ID = application.Event_ID
-    db_application.Applied_Date = application.Applied_Date
-    db_application.Status = application.Status
-
-    db.commit()
-    db.refresh(db_application)
-
-    return db_application
-
-
-def delete_application(db: Session, application_id: int):
-    db_application = db.query(Application).filter(
-        Application.Application_ID == application_id
+    # Find related event
+    event = db.query(Event).filter(
+        Event.id == application.Event_ID
     ).first()
 
-    if not db_application:
-        return None
+    # Do not allow cancellation after event completion
+    if event and event.Status == "Completed":
+        raise HTTPException(
+            status_code=400,
+            detail="Completed event application cannot be cancelled"
+        )
 
-    db.delete(db_application)
+    # Delete application
+    db.delete(application)
+
+    # Update event status after cancellation
+    if event:
+
+        remaining_applications = db.query(Application).filter(
+            Application.Event_ID == event.id,
+            Application.Application_ID != application_id
+        ).count()
+
+        if event.Maximum_Volunteers is not None:
+
+            if remaining_applications < event.Maximum_Volunteers:
+                event.Status = "Available"
+            else:
+                event.Status = "Full"
+
     db.commit()
 
-    return db_application
+    return {
+        "message": "Application cancelled successfully"
+    }
