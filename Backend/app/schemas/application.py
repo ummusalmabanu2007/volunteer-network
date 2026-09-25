@@ -11,6 +11,7 @@ class ApplicationCreate(BaseModel):
 
 class ApplicationResponse(ApplicationCreate):
     Application_ID: int
+    Cancelled_Date: date | None = None
 
     class Config:
         from_attributes = True

@@ -16,3 +16,4 @@ class Application(Base):
     Event_ID = Column(Integer, nullable=False)
     Applied_Date = Column(Date, nullable=True)
     Status = Column(String(50), nullable=True)
+    Cancelled_Date = Column(Date, nullable=True)

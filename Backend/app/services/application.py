@@ -2,6 +2,7 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from app.models.application import Application
 from app.models.event import Event
+from datetime import date
 
 
 def get_applications(db: Session):
@@ -19,7 +20,8 @@ def create_application(db: Session, application):
     # Check duplicate application
     existing_application = db.query(Application).filter(
         Application.Volunteer_ID == application.Volunteer_ID,
-        Application.Event_ID == application.Event_ID
+        Application.Event_ID == application.Event_ID,
+        Application.Status != "Cancelled"
     ).first()
 
     if existing_application:
@@ -46,9 +48,10 @@ def create_application(db: Session, application):
             detail="Event is completed"
         )
 
-    # Count applications
+    # Count only active applications
     application_count = db.query(Application).filter(
-        Application.Event_ID == application.Event_ID
+        Application.Event_ID == application.Event_ID,
+        Application.Status != "Cancelled"
     ).count()
 
     # Check maximum volunteers
@@ -105,6 +108,13 @@ def cancel_application(
             detail="Application not found"
         )
 
+    # Already cancelled application
+    if application.Status == "Cancelled":
+        raise HTTPException(
+            status_code=400,
+            detail="Application is already cancelled"
+        )
+
     # Find related event
     event = db.query(Event).filter(
         Event.id == application.Event_ID
@@ -117,15 +127,17 @@ def cancel_application(
             detail="Completed event application cannot be cancelled"
         )
 
-    # Delete application
-    db.delete(application)
+    # Mark application as cancelled
+    application.Status = "Cancelled"
+    application.Cancelled_Date = date.today()
 
     # Update event status after cancellation
     if event:
 
         remaining_applications = db.query(Application).filter(
             Application.Event_ID == event.id,
-            Application.Application_ID != application_id
+            Application.Application_ID != application_id,
+            Application.Status != "Cancelled"
         ).count()
 
         if event.Maximum_Volunteers is not None:
@@ -136,6 +148,7 @@ def cancel_application(
                 event.Status = "Full"
 
     db.commit()
+    db.refresh(application)
 
     return {
         "message": "Application cancelled successfully"

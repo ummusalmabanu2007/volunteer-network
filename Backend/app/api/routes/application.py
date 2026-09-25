@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -23,6 +23,18 @@ def read_applications(db: Session = Depends(get_db)):
     return get_applications(db)
 
 
+# Get cancelled applications
+@router.get("/cancelled", response_model=list[ApplicationResponse])
+def read_cancelled_applications(db: Session = Depends(get_db)):
+    applications = get_applications(db)
+
+    return [
+        application
+        for application in applications
+        if application.Status == "Cancelled"
+    ]
+
+
 # Get application by ID
 @router.get("/{application_id}", response_model=ApplicationResponse)
 def read_application(
@@ -32,8 +44,6 @@ def read_application(
     application = get_application(db, application_id)
 
     if not application:
-        from fastapi import HTTPException
-
         raise HTTPException(
             status_code=404,
             detail="Application not found"
@@ -63,4 +73,3 @@ def cancel_application_route(
         application_id,
         volunteer_id
     )
-
