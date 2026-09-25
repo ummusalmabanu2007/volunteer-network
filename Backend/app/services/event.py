@@ -1,16 +1,55 @@
+from datetime import date
 from sqlalchemy.orm import Session
+
 from app.models.event import Event
 from app.models.application import Application
 
 
+def update_event_status(db: Session, event):
+    application_count = db.query(Application).filter(
+        Application.Event_ID == event.id
+    ).count()
+
+    # Event date is already over
+    if event.Date < date.today():
+        event.Status = "Completed"
+
+    # Event is full
+    elif (
+        event.Maximum_Volunteers is not None
+        and application_count >= event.Maximum_Volunteers
+    ):
+        event.Status = "Full"
+
+    # Event is still available
+    else:
+        event.Status = "Available"
+
+
 def get_events(db: Session):
-    return db.query(Event).all()
+    events = db.query(Event).all()
+
+    for event in events:
+        update_event_status(db, event)
+
+    db.commit()
+
+    return events
 
 
 def get_event(db: Session, event_id: int):
-    return db.query(Event).filter(
+    event = db.query(Event).filter(
         Event.id == event_id
     ).first()
+
+    if not event:
+        return None
+
+    update_event_status(db, event)
+
+    db.commit()
+
+    return event
 
 
 def create_event(db: Session, event):
@@ -25,6 +64,11 @@ def create_event(db: Session, event):
     )
 
     db.add(db_event)
+    db.commit()
+    db.refresh(db_event)
+
+    update_event_status(db, db_event)
+
     db.commit()
     db.refresh(db_event)
 
@@ -46,15 +90,7 @@ def update_event(db: Session, event_id: int, event):
     db_event.Organization_ID = event.Organization_ID
     db_event.Maximum_Volunteers = event.Maximum_Volunteers
 
-    application_count = db.query(Application).filter(
-        Application.Event_ID == event_id
-    ).count()
-
-    if db_event.Maximum_Volunteers is not None:
-        if application_count >= db_event.Maximum_Volunteers:
-            db_event.Status = "Full"
-        else:
-            db_event.Status = "Available"
+    update_event_status(db, db_event)
 
     db.commit()
     db.refresh(db_event)
