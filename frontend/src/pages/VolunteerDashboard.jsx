@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react";
 
-const API_URL =
-  "https://volunteer-network-production-5388.up.railway.app";
+import { useEffect, useState, useCallback } from "react";
 
-function getEventIcon(eventName) {
+const API_URL = "https://volunteer-network-r7mr.onrender.com";
+
+function getEventIcon(eventName = "") {
   const name = eventName.toLowerCase();
 
   if (name.includes("tree") || name.includes("plant")) return "🌳";
@@ -23,42 +23,68 @@ function VolunteerDashboard() {
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [applicationLoading, setApplicationLoading] = useState(true);
+  const [busyEvent, setBusyEvent] = useState(null);
+  const [busyApplication, setBusyApplication] = useState(null);
 
-  useEffect(() => {
-    fetch(`${API_URL}/events/`)
-      .then((response) => response.json())
-      .then((data) => {
-        setEvents(data);
-        setLoading(false);
-      })
-      .catch((error) => {
-        console.error("Error fetching events:", error);
-        setLoading(false);
-      });
+  const volunteerId = localStorage.getItem("volunteer_id");
+
+  const fetchEvents = useCallback(async () => {
+    try {
+      const response = await fetch(`${API_URL}/events/`);
+      if (!response.ok) throw new Error("Unable to load events");
+
+      const data = await response.json();
+      setEvents(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error("Error fetching events:", error);
+      alert("Events load aagala. Backend URL check pannunga.");
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
+  const fetchApplications = useCallback(async () => {
+    try {
+      if (!volunteerId) {
+        setApplications([]);
+        return;
+      }
+
+      const response = await fetch(`${API_URL}/applications/`);
+      if (!response.ok) throw new Error("Unable to load applications");
+
+      const data = await response.json();
+
+      const myApplications = (Array.isArray(data) ? data : []).filter(
+        (application) =>
+          Number(application.Volunteer_ID) === Number(volunteerId) &&
+          application.Status !== "Cancelled"
+      );
+
+      setApplications(myApplications);
+    } catch (error) {
+      console.error("Error fetching applications:", error);
+      alert("Applications load aagala. Backend connection check pannunga.");
+    } finally {
+      setApplicationLoading(false);
+    }
+  }, [volunteerId]);
+
+  const refreshDashboard = useCallback(async () => {
+    await Promise.all([fetchEvents(), fetchApplications()]);
+  }, [fetchEvents, fetchApplications]);
+
   useEffect(() => {
-    const volunteerId = localStorage.getItem("volunteer_id");
-
-    fetch(`${API_URL}/applications/`)
-      .then((response) => response.json())
-      .then((data) => {
-        const myApplications = data.filter(
-          (application) =>
-            application.Volunteer_ID === Number(volunteerId)
-        );
-
-        setApplications(myApplications);
-        setApplicationLoading(false);
-      })
-      .catch((error) => {
-        console.error("Error fetching applications:", error);
-        setApplicationLoading(false);
-      });
-  }, []);
+    refreshDashboard();
+  }, [refreshDashboard]);
 
   const handleApply = async (eventId) => {
-    const volunteerId = localStorage.getItem("volunteer_id");
+    if (!volunteerId) {
+      alert("Please login again.");
+      return;
+    }
+
+    setBusyEvent(eventId);
 
     const applicationData = {
       Volunteer_ID: Number(volunteerId),
@@ -68,71 +94,65 @@ function VolunteerDashboard() {
     };
 
     try {
-      const response = await fetch(
-        `${API_URL}/applications/`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(applicationData),
-        }
-      );
+      const response = await fetch(`${API_URL}/applications/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(applicationData),
+      });
 
       const data = await response.json();
 
-      if (response.ok) {
-        alert("Application submitted successfully!");
-
-        setApplications((previousApplications) => [
-          ...previousApplications,
-          data,
-        ]);
-      } else {
+      if (!response.ok) {
         alert(data.detail || "Application failed");
+        await refreshDashboard();
+        return;
       }
+
+      alert("Application submitted successfully!");
+      await refreshDashboard();
     } catch (error) {
       console.error("Application error:", error);
-      alert("Backend connection failed!");
+      alert("Backend connection failed. Please try again.");
+    } finally {
+      setBusyEvent(null);
     }
   };
 
   const handleCancel = async (applicationId) => {
-    const volunteerId = localStorage.getItem("volunteer_id");
+    if (!volunteerId) {
+      alert("Please login again.");
+      return;
+    }
 
     const confirmed = window.confirm(
       "Are you sure you want to cancel this application?"
     );
 
-    if (!confirmed) {
-      return;
-    }
+    if (!confirmed) return;
+
+    setBusyApplication(applicationId);
 
     try {
       const response = await fetch(
         `${API_URL}/applications/${applicationId}/${volunteerId}`,
-        {
-          method: "DELETE",
-        }
+        { method: "DELETE" }
       );
 
       const data = await response.json();
 
-      if (response.ok) {
-        alert("Application cancelled successfully!");
-
-        setApplications((previousApplications) =>
-          previousApplications.filter(
-            (application) =>
-              application.Application_ID !== applicationId
-          )
-        );
-      } else {
+      if (!response.ok) {
         alert(data.detail || "Cancellation failed");
+        await refreshDashboard();
+        return;
       }
+
+      alert("Application cancelled successfully!");
+      await refreshDashboard();
     } catch (error) {
       console.error("Cancel application error:", error);
-      alert("Backend connection failed!");
+      alert("Backend connection failed. Please try again.");
+    } finally {
+      setBusyApplication(null);
     }
   };
 
@@ -142,16 +162,11 @@ function VolunteerDashboard() {
     window.location.reload();
   };
 
+  const activeApplicationCount = applications.length;
+
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background: "#f4f8ff",
-        paddingBottom: "40px",
-      }}
-    >
-      {/* Header */}
-      <div
+    <div style={{ minHeight: "100vh", background: "#f4f8ff", paddingBottom: 40 }}>
+      <header
         style={{
           background: "linear-gradient(135deg, #1769e0, #4f8df7)",
           color: "white",
@@ -159,400 +174,184 @@ function VolunteerDashboard() {
           textAlign: "center",
         }}
       >
-        <div style={{ fontSize: "45px" }}>🤝</div>
+        <div style={{ fontSize: 45 }}>🤝</div>
+        <h1 style={{ margin: "5px 0", fontSize: 32 }}>Volunteer Dashboard</h1>
+        <p>Welcome, {localStorage.getItem("volunteer_name") || "Volunteer"}</p>
+      </header>
 
-        <h1
-          style={{
-            margin: "5px 0",
-            fontSize: "32px",
-          }}
-        >
-          Volunteer Dashboard
-        </h1>
-
-        <p
-          style={{
-            margin: "8px 0 0",
-            fontSize: "17px",
-          }}
-        >
-          Welcome, {localStorage.getItem("volunteer_name")}
-        </p>
-      </div>
-
-      {/* Main Content */}
-      <div
-        style={{
-          maxWidth: "1100px",
-          margin: "auto",
-          padding: "30px 20px",
-        }}
-      >
-        {/* Profile Card */}
-        <div
+      <main style={{ maxWidth: 1100, margin: "auto", padding: "30px 20px" }}>
+        <section
           style={{
             background: "white",
-            borderRadius: "18px",
-            padding: "22px",
-            marginBottom: "25px",
+            borderRadius: 18,
+            padding: 22,
+            marginBottom: 25,
             boxShadow: "0 5px 20px rgba(0,0,0,0.08)",
-            display: "flex",
-            alignItems: "center",
-            gap: "18px",
           }}
         >
-          <div
-            style={{
-              width: "60px",
-              height: "60px",
-              borderRadius: "50%",
-              background: "#e8f1ff",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: "30px",
-            }}
-          >
-            👤
-          </div>
+          <h2>👤 Volunteer Profile</h2>
+          <p>View and manage your volunteer activities.</p>
+        </section>
 
-          <div>
-            <h2
-              style={{
-                margin: "0 0 5px",
-                color: "#222",
-              }}
-            >
-              Volunteer Profile
-            </h2>
-
-            <p
-              style={{
-                margin: 0,
-                color: "#777",
-              }}
-            >
-              View and manage your volunteer activities
-            </p>
-          </div>
-        </div>
-
-        {/* Summary Cards */}
         <div
           style={{
             display: "grid",
-            gridTemplateColumns:
-              "repeat(auto-fit, minmax(200px, 1fr))",
-            gap: "18px",
-            marginBottom: "35px",
+            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+            gap: 18,
+            marginBottom: 35,
           }}
         >
-          <div
-            style={{
-              background: "white",
-              borderRadius: "16px",
-              padding: "22px",
-              textAlign: "center",
-              boxShadow: "0 5px 18px rgba(0,0,0,0.07)",
-            }}
-          >
-            <div style={{ fontSize: "32px" }}>📅</div>
-
-            <h3
-              style={{
-                margin: "8px 0 3px",
-                color: "#1769e0",
-                fontSize: "28px",
-              }}
-            >
-              {events.length}
-            </h3>
-
-            <p style={{ margin: 0, color: "#666" }}>
-              Available Events
-            </p>
-          </div>
-
-          <div
-            style={{
-              background: "white",
-              borderRadius: "16px",
-              padding: "22px",
-              textAlign: "center",
-              boxShadow: "0 5px 18px rgba(0,0,0,0.07)",
-            }}
-          >
-            <div style={{ fontSize: "32px" }}>📝</div>
-
-            <h3
-              style={{
-                margin: "8px 0 3px",
-                color: "#f39c12",
-                fontSize: "28px",
-              }}
-            >
-              {applications.length}
-            </h3>
-
-            <p style={{ margin: 0, color: "#666" }}>
-              My Applications
-            </p>
-          </div>
+          <SummaryCard title="Available Events" count={events.length} icon="📅" />
+          <SummaryCard title="My Active Applications" count={activeApplicationCount} icon="📝" />
         </div>
 
-        {/* Available Events */}
-        <h2
-          style={{
-            color: "#222",
-            marginBottom: "18px",
-          }}
-        >
-          📅 Available Events
-        </h2>
+        <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 20 }}>
+          <button onClick={refreshDashboard} style={buttonStyle("#1769e0")}>
+            🔄 Refresh Dashboard
+          </button>
+        </div>
+
+        <h2>📅 Available Events</h2>
 
         {loading ? (
           <p>Loading events...</p>
         ) : events.length === 0 ? (
-          <div
-            style={{
-              background: "white",
-              padding: "25px",
-              borderRadius: "15px",
-              textAlign: "center",
-            }}
-          >
-            No events available.
-          </div>
+          <p>No events available.</p>
         ) : (
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns:
-                "repeat(auto-fit, minmax(280px, 1fr))",
-              gap: "22px",
-            }}
-          >
-            {events.map((event) => (
-              <div
-                key={event.id}
-                style={{
-                  background: "white",
-                  borderRadius: "18px",
-                  padding: "25px",
-                  boxShadow: "0 6px 20px rgba(0,0,0,0.08)",
-                  border: "1px solid #edf1f7",
-                }}
-              >
-                <div
-                  style={{
-                    fontSize: "45px",
-                    textAlign: "center",
-                    marginBottom: "10px",
-                  }}
-                >
-                  {getEventIcon(event.Event_Name)}
-                </div>
+          <div style={gridStyle}>
+            {events.map((event) => {
+              const alreadyApplied = applications.some(
+                (application) =>
+                  Number(application.Event_ID) === Number(event.id)
+              );
+              const isFull = event.Status === "Full";
+              const isCompleted = event.Status === "Completed";
 
-                <h3
-                  style={{
-                    color: "#1769e0",
-                    textAlign: "center",
-                    marginBottom: "18px",
-                  }}
-                >
-                  {event.Event_Name}
-                </h3>
+              return (
+                <article key={event.id} style={cardStyle}>
+                  <div style={{ fontSize: 42, textAlign: "center" }}>
+                    {getEventIcon(event.Event_Name)}
+                  </div>
 
-                <p>
-                  <strong>📅 Date:</strong> {event.Date}
-                </p>
+                  <h3 style={{ color: "#1769e0", textAlign: "center" }}>
+                    {event.Event_Name}
+                  </h3>
 
-                <p>
-                  <strong>📍 Location:</strong>{" "}
-                  {event.Location}
-                </p>
+                  <p><strong>📅 Date:</strong> {String(event.Date).slice(0, 10)}</p>
+                  <p><strong>📍 Location:</strong> {event.Location}</p>
+                  <p><strong>📝 Description:</strong> {event.Description}</p>
+                  <p><strong>🏢 Organization ID:</strong> {event.Organization_ID}</p>
+                  <p><strong>👥 Maximum Volunteers:</strong> {event.Maximum_Volunteers ?? "Not specified"}</p>
+                  <p><strong>Status:</strong> {event.Status || "Available"}</p>
 
-                <p>
-                  <strong>📝 Description:</strong>{" "}
-                  {event.Description}
-                </p>
-
-                <p>
-                  <strong>🏢 Organization:</strong>{" "}
-                  {event.Organization_ID}
-                </p>
-
-                <p>
-                  <strong>👥 Maximum Volunteers:</strong>{" "}
-                  {event.Maximum_Volunteers || "Not specified"}
-                </p>
-
-                <div
-                  style={{
-                    textAlign: "center",
-                    marginTop: "20px",
-                  }}
-                >
                   <button
                     onClick={() => handleApply(event.id)}
-                    disabled={event.Status === "Full"}
-                    style={{
-                      width: "100%",
-                      padding: "12px",
-                      border: "none",
-                      borderRadius: "10px",
-                      background:
-                        event.Status === "Full"
-                          ? "#999"
-                          : "#1769e0",
-                      color: "white",
-                      fontWeight: "700",
-                      cursor:
-                        event.Status === "Full"
-                          ? "not-allowed"
-                          : "pointer",
-                    }}
+                    disabled={isFull || isCompleted || alreadyApplied || busyEvent === event.id}
+                    style={buttonStyle(
+                      isFull || isCompleted || alreadyApplied ? "#999" : "#1769e0"
+                    )}
                   >
-                    {event.Status === "Full"
+                    {busyEvent === event.id
+                      ? "Please wait..."
+                      : alreadyApplied
+                      ? "Already Applied"
+                      : isFull
                       ? "Event Full"
+                      : isCompleted
+                      ? "Event Completed"
                       : "Apply Now"}
                   </button>
-                </div>
-              </div>
-            ))}
+                </article>
+              );
+            })}
           </div>
         )}
 
-        {/* My Applications */}
-        <h2
-          style={{
-            marginTop: "45px",
-            marginBottom: "18px",
-            color: "#222",
-          }}
-        >
-          📝 My Applications
-        </h2>
+        <h2 style={{ marginTop: 45 }}>📝 My Applications</h2>
 
         {applicationLoading ? (
           <p>Loading applications...</p>
         ) : applications.length === 0 ? (
-          <div
-            style={{
-              background: "white",
-              padding: "25px",
-              borderRadius: "15px",
-              textAlign: "center",
-              color: "#777",
-            }}
-          >
-            No applications found.
-          </div>
+          <p style={cardStyle}>No active applications found.</p>
         ) : (
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns:
-                "repeat(auto-fit, minmax(280px, 1fr))",
-              gap: "18px",
-            }}
-          >
+          <div style={gridStyle}>
             {applications.map((application) => (
-              <div
-                key={application.Application_ID}
-                style={{
-                  background: "white",
-                  padding: "20px",
-                  borderRadius: "16px",
-                  boxShadow: "0 5px 18px rgba(0,0,0,0.07)",
-                  borderLeft: "5px solid #f39c12",
-                }}
-              >
-                <h3
-                  style={{
-                    marginTop: 0,
-                    color: "#333",
-                  }}
-                >
-                  📝 Application #{application.Application_ID}
-                </h3>
+              <article key={application.Application_ID} style={cardStyle}>
+                <h3>Application #{application.Application_ID}</h3>
+                <p><strong>Event ID:</strong> {application.Event_ID}</p>
+                <p><strong>Applied Date:</strong> {String(application.Applied_Date).slice(0, 10)}</p>
+                <p><strong>Status:</strong> {application.Status}</p>
 
-                <p>
-                  <strong>Event ID:</strong>{" "}
-                  {application.Event_ID}
-                </p>
-
-                <p>
-                  <strong>Applied Date:</strong>{" "}
-                  {application.Applied_Date}
-                </p>
-
-                <p>
-                  <strong>Status:</strong>{" "}
-                  <span
-                    style={{
-                      color:
-                        application.Status === "Approved"
-                          ? "#198754"
-                          : application.Status === "Rejected"
-                          ? "#dc3545"
-                          : "#f39c12",
-                      fontWeight: "700",
-                    }}
-                  >
-                    {application.Status}
-                  </span>
-                </p>
-
-                {/* Cancel Application */}
                 <button
-                  onClick={() =>
-                    handleCancel(application.Application_ID)
-                  }
-                  style={{
-                    width: "100%",
-                    padding: "11px",
-                    marginTop: "12px",
-                    background: "#dc3545",
-                    color: "white",
-                    border: "none",
-                    borderRadius: "8px",
-                    fontWeight: "700",
-                    cursor: "pointer",
-                  }}
+                  onClick={() => handleCancel(application.Application_ID)}
+                  disabled={busyApplication === application.Application_ID}
+                  style={buttonStyle("#dc3545")}
                 >
-                  ❌ Cancel Application
+                  {busyApplication === application.Application_ID
+                    ? "Cancelling..."
+                    : "❌ Cancel Application"}
                 </button>
-              </div>
+              </article>
             ))}
           </div>
         )}
 
-        {/* Logout */}
-        <div
-          style={{
-            textAlign: "center",
-            marginTop: "40px",
-          }}
-        >
-          <button
-            onClick={handleLogout}
-            style={{
-              padding: "12px 35px",
-              background: "#dc3545",
-              color: "white",
-              border: "none",
-              borderRadius: "10px",
-              fontWeight: "700",
-              cursor: "pointer",
-            }}
-          >
+        <div style={{ textAlign: "center", marginTop: 40 }}>
+          <button onClick={handleLogout} style={buttonStyle("#dc3545")}>
             🚪 Logout
           </button>
         </div>
-      </div>
+      </main>
     </div>
   );
+}
+
+function SummaryCard({ title, count, icon }) {
+  return (
+    <div
+      style={{
+        background: "white",
+        borderRadius: 16,
+        padding: 22,
+        textAlign: "center",
+        boxShadow: "0 5px 18px rgba(0,0,0,0.07)",
+      }}
+    >
+      <div style={{ fontSize: 32 }}>{icon}</div>
+      <h3 style={{ margin: "8px 0 3px", color: "#1769e0", fontSize: 28 }}>
+        {count}
+      </h3>
+      <p style={{ margin: 0, color: "#666" }}>{title}</p>
+    </div>
+  );
+}
+
+const gridStyle = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+  gap: 22,
+};
+
+const cardStyle = {
+  background: "white",
+  borderRadius: 16,
+  padding: 22,
+  boxShadow: "0 5px 18px rgba(0,0,0,0.07)",
+  border: "1px solid #edf1f7",
+};
+
+function buttonStyle(background) {
+  return {
+    width: "100%",
+    padding: 12,
+    marginTop: 12,
+    background,
+    color: "white",
+    border: "none",
+    borderRadius: 9,
+    fontWeight: 700,
+    cursor: "pointer",
+  };
 }
 
 export default VolunteerDashboard;

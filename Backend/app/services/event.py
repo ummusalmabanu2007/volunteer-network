@@ -1,3 +1,4 @@
+
 from datetime import date
 from sqlalchemy.orm import Session
 
@@ -6,8 +7,11 @@ from app.models.application import Application
 
 
 def update_event_status(db: Session, event):
+    # Count only active applications.
+    # Cancelled applications should not count.
     application_count = db.query(Application).filter(
-        Application.Event_ID == event.id
+        Application.Event_ID == event.id,
+        Application.Status != "Cancelled"
     ).count()
 
     # Event date is already over
