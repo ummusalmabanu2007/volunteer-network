@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 const API_URL =
-  "https://volunteer-network-production-5388.up.railway.app";
+  "https://volunteer-network-r7mr.onrender.com";
 
 function getEventIcon(eventName) {
   const name = eventName.toLowerCase();

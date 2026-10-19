@@ -24,7 +24,7 @@ function Event() {
 
     try {
       const response = await fetch(
-         "https://volunteer-network-production-5388.up.railway.app/events/",
+         "https://volunteer-network-r7mr.onrender.com/events/",
         {
           method: "POST",
           headers: {
