@@ -1,22 +1,24 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import Event from "./Event";
 
-  
-   const API_URL =
-  "https://volunteer-network-r7mr.onrender.com";
+const API_URL = "https://volunteer-network-r7mr.onrender.com";
+
 function getEventIcon(eventName) {
-  const name = eventName.toLowerCase();
+  const name = String(eventName || "").toLowerCase();
 
-  if (name.includes("tree") || name.includes("plant")) return "ðŸŒ³";
-  if (name.includes("clean")) return "ðŸ§¹";
-  if (name.includes("blood")) return "ðŸ©¸";
-  if (name.includes("food")) return "ðŸ±";
-  if (name.includes("beach")) return "ðŸ–ï¸";
-  if (name.includes("medical") || name.includes("health")) return "ðŸ¥";
-  if (name.includes("sports")) return "âš½";
-  if (name.includes("disaster") || name.includes("relief")) return "ðŸš‘";
+  if (name.includes("tree") || name.includes("plant") || name.includes("environment")) return "🌳";
+  if (name.includes("clean")) return "🧹";
+  if (name.includes("blood")) return "🩸";
+  if (name.includes("food")) return "🍱";
+  if (name.includes("beach")) return "🏖️";
+  if (name.includes("medical") || name.includes("health")) return "🏥";
+  if (name.includes("sport")) return "⚽";
+  if (name.includes("disaster") || name.includes("relief")) return "🚑";
 
-  return "ðŸ¤";
+  return "🤝";
+}
+function isCancelled(application) {
+  return String(application.Status || "").trim().toLowerCase() === "cancelled";
 }
 
 function Organization() {
@@ -26,17 +28,16 @@ function Organization() {
   const loadData = async () => {
     try {
       const eventResponse = await fetch(`${API_URL}/events/`);
+      if (!eventResponse.ok) throw new Error("Could not load events");
+
       const eventData = await eventResponse.json();
+      setEvents(Array.isArray(eventData) ? eventData : []);
 
-      setEvents(eventData);
-
-      const applicationResponse = await fetch(
-        `${API_URL}/applications/`
-      );
+      const applicationResponse = await fetch(`${API_URL}/applications/`);
+      if (!applicationResponse.ok) throw new Error("Could not load applications");
 
       const applicationData = await applicationResponse.json();
-
-      setApplications(applicationData);
+      setApplications(Array.isArray(applicationData) ? applicationData : []);
     } catch (error) {
       console.error("Dashboard error:", error);
     }
@@ -46,55 +47,52 @@ function Organization() {
     loadData();
   }, []);
 
+  const activeApplications = applications.filter(
+    (application) => !isCancelled(application)
+  );
+
   const getAppliedCount = (eventId) => {
-    return applications.filter(
+    return activeApplications.filter(
       (application) =>
-        Number(application.Event_ID) === Number(eventId) &&
-        String(application.Status || "").toLowerCase() !== "cancelled"
+        Number(application.Event_ID) === Number(eventId)
     ).length;
   };
+
   const handleUpdateMaximum = async (event) => {
     const newMaximum = prompt(
       "Enter Maximum Volunteers:",
       event.Maximum_Volunteers || ""
     );
 
-    if (!newMaximum) {
-      return;
-    }
+    if (newMaximum === null || newMaximum.trim() === "") return;
 
     const maximum = Number(newMaximum);
 
-    if (maximum < 1) {
-      alert("Maximum Volunteers must be at least 1");
+    if (!Number.isInteger(maximum) || maximum < 1) {
+      alert("Maximum Volunteers must be a positive whole number");
       return;
     }
 
     try {
-      const response = await fetch(
-        `${API_URL}/events/${event.id}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            Event_Name: event.Event_Name,
-            Date: event.Date,
-            Location: event.Location,
-            Description: event.Description,
-            Organization_ID: event.Organization_ID,
-            Maximum_Volunteers: maximum,
-            Status: event.Status,
-          }),
-        }
-      );
+      const response = await fetch(`${API_URL}/events/${event.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          Event_Name: event.Event_Name,
+          Date: event.Date,
+          Location: event.Location,
+          Description: event.Description,
+          Organization_ID: event.Organization_ID,
+          Maximum_Volunteers: maximum,
+          Status: event.Status,
+        }),
+      });
 
       const data = await response.json();
 
       if (response.ok) {
         alert("Maximum Volunteers updated successfully!");
-        loadData();
+        await loadData();
       } else {
         alert(data.detail || "Update failed");
       }
@@ -111,14 +109,7 @@ function Organization() {
   };
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background: "#f4f8ff",
-        paddingBottom: "40px",
-      }}
-    >
-      {/* Header */}
+    <div style={{ minHeight: "100vh", background: "#f4f8ff", paddingBottom: "40px" }}>
       <div
         style={{
           background: "linear-gradient(135deg, #1769e0, #4f8df7)",
@@ -127,30 +118,20 @@ function Organization() {
           textAlign: "center",
         }}
       >
-        <div style={{ fontSize: "45px" }}>ðŸ¢</div>
-
+        <div style={{ fontSize: "45px" }}>🏢</div>
         <h1 style={{ margin: "5px 0", fontSize: "32px" }}>
           Organization Dashboard
         </h1>
-
         <p style={{ margin: "8px 0 0", fontSize: "17px" }}>
           Welcome, {localStorage.getItem("organization_name")}
         </p>
       </div>
 
-      <div
-        style={{
-          maxWidth: "1100px",
-          margin: "auto",
-          padding: "30px 20px",
-        }}
-      >
-        {/* Summary Cards */}
+      <div style={{ maxWidth: "1100px", margin: "auto", padding: "30px 20px" }}>
         <div
           style={{
             display: "grid",
-            gridTemplateColumns:
-              "repeat(auto-fit, minmax(200px, 1fr))",
+            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
             gap: "18px",
             marginBottom: "35px",
           }}
@@ -164,20 +145,11 @@ function Organization() {
               boxShadow: "0 5px 18px rgba(0,0,0,0.07)",
             }}
           >
-            <div style={{ fontSize: "32px" }}>ðŸ“…</div>
-
-            <h2
-              style={{
-                color: "#1769e0",
-                margin: "8px 0 3px",
-              }}
-            >
+            <div style={{ fontSize: "32px" }}>📅</div>
+            <h2 style={{ color: "#1769e0", margin: "8px 0 3px" }}>
               {events.length}
             </h2>
-
-            <p style={{ margin: 0, color: "#666" }}>
-              Total Events
-            </p>
+            <p style={{ margin: 0, color: "#666" }}>Total Events</p>
           </div>
 
           <div
@@ -189,24 +161,14 @@ function Organization() {
               boxShadow: "0 5px 18px rgba(0,0,0,0.07)",
             }}
           >
-            <div style={{ fontSize: "32px" }}>ðŸ‘¥</div>
-
-            <h2
-              style={{
-                color: "#198754",
-                margin: "8px 0 3px",
-              }}
-            >
-              {applications.length}
+            <div style={{ fontSize: "32px" }}>👥</div>
+            <h2 style={{ color: "#198754", margin: "8px 0 3px" }}>
+              {activeApplications.length}
             </h2>
-
-            <p style={{ margin: 0, color: "#666" }}>
-              Total Applications
-            </p>
+            <p style={{ margin: 0, color: "#666" }}>Total Active Applications</p>
           </div>
         </div>
 
-        {/* Create Event */}
         <div
           style={{
             background: "white",
@@ -216,17 +178,11 @@ function Organization() {
             boxShadow: "0 5px 20px rgba(0,0,0,0.08)",
           }}
         >
-          <h2 style={{ color: "#222", marginTop: 0 }}>
-            âž• Create New Event
-          </h2>
-
+          <h2 style={{ color: "#222", marginTop: 0 }}>➕ Create New Event</h2>
           <Event />
         </div>
 
-        {/* Events */}
-        <h2 style={{ marginBottom: "20px" }}>
-          ðŸ“… My Created Events
-        </h2>
+        <h2 style={{ marginBottom: "20px" }}>📅 My Created Events</h2>
 
         {events.length === 0 ? (
           <div
@@ -243,25 +199,16 @@ function Organization() {
           <div
             style={{
               display: "grid",
-              gridTemplateColumns:
-                "repeat(auto-fit, minmax(300px, 1fr))",
+              gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
               gap: "22px",
             }}
           >
             {events.map((event) => {
               const appliedCount = getAppliedCount(event.id);
-              const maximum = event.Maximum_Volunteers || 0;
-
-              const availableSeats =
-                maximum > appliedCount
-                  ? maximum - appliedCount
-                  : 0;
-
-              const isCompleted =
-                event.Status === "Completed";
-
-              const isFull =
-                !isCompleted && availableSeats === 0;
+              const maximum = Number(event.Maximum_Volunteers) || 0;
+              const availableSeats = Math.max(0, maximum - appliedCount);
+              const isCompleted = event.Status === "Completed";
+              const isFull = !isCompleted && maximum > 0 && appliedCount >= maximum;
 
               return (
                 <div
@@ -270,8 +217,7 @@ function Organization() {
                     background: "white",
                     borderRadius: "18px",
                     padding: "25px",
-                    boxShadow:
-                      "0 6px 20px rgba(0,0,0,0.08)",
+                    boxShadow: "0 6px 20px rgba(0,0,0,0.08)",
                     border: "1px solid #edf1f7",
                   }}
                 >
@@ -285,73 +231,35 @@ function Organization() {
                     {getEventIcon(event.Event_Name)}
                   </div>
 
-                  <h3
-                    style={{
-                      textAlign: "center",
-                      color: "#1769e0",
-                      marginBottom: "20px",
-                    }}
-                  >
+                  <h3 style={{ textAlign: "center", color: "#1769e0", marginBottom: "20px" }}>
                     {event.Event_Name}
                   </h3>
 
-                  <p>
-                    <strong>ðŸ“… Date:</strong>{" "}
-                    {event.Date}
-                  </p>
-
-                  <p>
-                    <strong>ðŸ“ Location:</strong>{" "}
-                    {event.Location}
-                  </p>
-
-                  <p>
-                    <strong>ðŸ“ Description:</strong>{" "}
-                    {event.Description}
-                  </p>
+                  <p><strong>📅 Date:</strong> {event.Date}</p>
+                  <p><strong>📍 Location:</strong> {event.Location || "Not specified"}</p>
+                  <p><strong>📝 Description:</strong> {event.Description || "No description"}</p>
 
                   <hr />
 
-                  <p>
-                    <strong>ðŸ‘¥ Applied Volunteers:</strong>{" "}
-                    {appliedCount}
-                  </p>
-
-                  <p>
-                    <strong>ðŸ‘¥ Maximum Volunteers:</strong>{" "}
-                    {maximum}
-                  </p>
-
-                  <p>
-                    <strong>ðŸª‘ Available Seats:</strong>{" "}
-                    {availableSeats}
-                  </p>
+                  <p><strong>👥 Applied Volunteers:</strong> {appliedCount}</p>
+                  <p><strong>👥 Maximum Volunteers:</strong> {maximum}</p>
+                  <p><strong>🪑 Available Seats:</strong> {availableSeats}</p>
 
                   <p>
                     <strong>Status:</strong>{" "}
                     <span
                       style={{
-                        color: isCompleted
-                          ? "#6c757d"
-                          : isFull
-                          ? "#dc3545"
-                          : "#198754",
+                        color: isCompleted ? "#6c757d" : isFull ? "#dc3545" : "#198754",
                         fontWeight: "700",
                       }}
                     >
-                      {isCompleted
-                        ? "Completed"
-                        : isFull
-                        ? "Full"
-                        : "Available"}
+                      {isCompleted ? "Completed" : isFull ? "Full" : "Available"}
                     </span>
                   </p>
 
                   {!isCompleted && (
                     <button
-                      onClick={() =>
-                        handleUpdateMaximum(event)
-                      }
+                      onClick={() => handleUpdateMaximum(event)}
                       style={{
                         width: "100%",
                         padding: "12px",
@@ -364,7 +272,7 @@ function Organization() {
                         cursor: "pointer",
                       }}
                     >
-                      âœï¸ Change Maximum Volunteers
+                      ✏️ Change Maximum Volunteers
                     </button>
                   )}
                 </div>
@@ -373,13 +281,7 @@ function Organization() {
           </div>
         )}
 
-        {/* Logout */}
-        <div
-          style={{
-            textAlign: "center",
-            marginTop: "40px",
-          }}
-        >
+        <div style={{ textAlign: "center", marginTop: "40px" }}>
           <button
             onClick={handleLogout}
             style={{
@@ -392,7 +294,7 @@ function Organization() {
               cursor: "pointer",
             }}
           >
-            ðŸšª Logout
+            🚪 Logout
           </button>
         </div>
       </div>
