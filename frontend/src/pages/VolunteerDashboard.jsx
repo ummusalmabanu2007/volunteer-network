@@ -340,7 +340,7 @@ const cardStyle = {
   border: "1px solid #edf1f7",
 };
 
-function buttonStyle(background) {
+function buttonStyle(background){
   return {
     width: "100%",
     padding: 12,

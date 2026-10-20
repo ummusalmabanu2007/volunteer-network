@@ -65,10 +65,7 @@ function Login() {
             "organization_id",
             data.organization_id
           );
-          localStorage.setItem(
-            "organization_name",
-            data.name
-          );
+          localStorage.setItem("organization_name", data.name);
         }
 
         if (role === "admin") {
@@ -78,12 +75,30 @@ function Login() {
 
         window.location.href = "/";
       } else {
-        alert("Login failed: " + data.detail);
+        alert("Login failed: " + (data.detail || "Please check your login details."));
       }
     } catch (error) {
       console.error("Login error:", error);
       alert("Backend connection failed!");
     }
+  };
+
+  const inputStyle = {
+    width: "100%",
+    padding: "13px",
+    border: "1px solid #d5dce5",
+    borderRadius: "10px",
+    marginBottom: "20px",
+    fontSize: "15px",
+    boxSizing: "border-box",
+    outline: "none",
+  };
+
+  const labelStyle = {
+    display: "block",
+    fontWeight: "600",
+    marginBottom: "8px",
+    color: "#333",
   };
 
   return (
@@ -92,13 +107,14 @@ function Login() {
         minHeight: "100vh",
         display: "flex",
         background: "#f4f8ff",
+        flexWrap: "wrap",
       }}
     >
       {/* LEFT SIDE IMAGE */}
       <div
         style={{
-          flex: 1.15,
-          minHeight: "100vh",
+          flex: "1.15 1 350px",
+          minHeight: "400px",
           backgroundImage: "url('/volunteer-service.png')",
           backgroundSize: "cover",
           backgroundPosition: "center",
@@ -109,7 +125,6 @@ function Login() {
           position: "relative",
         }}
       >
-        {/* Image overlay */}
         <div
           style={{
             position: "absolute",
@@ -117,9 +132,8 @@ function Login() {
             background:
               "linear-gradient(135deg, rgba(23,105,224,0.25), rgba(0,0,0,0.15))",
           }}
-        ></div>
+        />
 
-        {/* Left side text */}
         <div
           style={{
             position: "relative",
@@ -130,30 +144,15 @@ function Login() {
             textShadow: "0 2px 8px rgba(0,0,0,0.35)",
           }}
         >
-          <h1
-            style={{
-              fontSize: "42px",
-              marginBottom: "12px",
-            }}
-          >
+          <h1 style={{ fontSize: "42px", marginBottom: "12px" }}>
             Volunteer Community
           </h1>
 
-          <h2
-            style={{
-              fontSize: "28px",
-              margin: 0,
-            }}
-          >
+          <h2 style={{ fontSize: "28px", margin: 0 }}>
             Network 🤝
           </h2>
 
-          <p
-            style={{
-              fontSize: "17px",
-              marginTop: "18px",
-            }}
-          >
+          <p style={{ fontSize: "17px", marginTop: "18px" }}>
             Together for a Better Tomorrow 💙
           </p>
         </div>
@@ -162,7 +161,7 @@ function Login() {
       {/* RIGHT SIDE LOGIN */}
       <div
         style={{
-          flex: 0.85,
+          flex: "0.85 1 350px",
           minHeight: "100vh",
           display: "flex",
           alignItems: "center",
@@ -178,30 +177,19 @@ function Login() {
             background: "#ffffff",
             padding: "42px",
             borderRadius: "24px",
-            boxShadow:
-              "0 15px 45px rgba(23, 105, 224, 0.15)",
+            boxShadow: "0 15px 45px rgba(23, 105, 224, 0.15)",
             boxSizing: "border-box",
           }}
         >
           {/* LOGIN HEADER */}
-          <div
-            style={{
-              textAlign: "center",
-              marginBottom: "30px",
-            }}
-          >
-            <div
-              style={{
-                fontSize: "42px",
-                marginBottom: "8px",
-              }}
-            >
+          <div style={{ textAlign: "center", marginBottom: "30px" }}>
+            <div style={{ fontSize: "42px", marginBottom: "8px" }}>
               🔐
             </div>
 
             <h1
               style={{
-                margin: "0",
+                margin: 0,
                 color: "#1769e0",
                 fontSize: "28px",
               }}
@@ -222,56 +210,23 @@ function Login() {
 
           <form onSubmit={handleLogin}>
             {/* ROLE */}
-            <label
-              style={{
-                display: "block",
-                fontWeight: "600",
-                marginBottom: "8px",
-                color: "#333",
-              }}
-            >
-              👤 Select Role
-            </label>
+            <label style={labelStyle}>👤 Select Role</label>
 
             <select
               value={role}
               onChange={(e) => setRole(e.target.value)}
               style={{
-                width: "100%",
-                padding: "13px",
-                border: "1px solid #d5dce5",
-                borderRadius: "10px",
-                marginBottom: "20px",
-                fontSize: "15px",
+                ...inputStyle,
                 background: "#fff",
-                boxSizing: "border-box",
-                outline: "none",
               }}
             >
-              <option value="volunteer">
-                👤 Volunteer
-              </option>
-
-              <option value="organization">
-                🏢 Organization
-              </option>
-
-              <option value="admin">
-                🛡️ Admin
-              </option>
+              <option value="volunteer">👤 Volunteer</option>
+              <option value="organization">🏢 Organization</option>
+              <option value="admin">🛡️ Admin</option>
             </select>
 
             {/* EMAIL */}
-            <label
-              style={{
-                display: "block",
-                fontWeight: "600",
-                marginBottom: "8px",
-                color: "#333",
-              }}
-            >
-              📧 Email
-            </label>
+            <label style={labelStyle}>📧 Email</label>
 
             <input
               type="email"
@@ -279,29 +234,11 @@ function Login() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              style={{
-                width: "100%",
-                padding: "13px",
-                border: "1px solid #d5dce5",
-                borderRadius: "10px",
-                marginBottom: "20px",
-                fontSize: "15px",
-                boxSizing: "border-box",
-                outline: "none",
-              }}
+              style={inputStyle}
             />
 
             {/* PASSWORD */}
-            <label
-              style={{
-                display: "block",
-                fontWeight: "600",
-                marginBottom: "8px",
-                color: "#333",
-              }}
-            >
-              🔒 Password
-            </label>
+            <label style={labelStyle}>🔒 Password</label>
 
             <div
               style={{
@@ -313,26 +250,18 @@ function Login() {
                 type={showPassword ? "text" : "password"}
                 placeholder="Enter your password"
                 value={password}
-                onChange={(e) =>
-                  setPassword(e.target.value)
-                }
+                onChange={(e) => setPassword(e.target.value)}
                 required
                 style={{
-                  width: "100%",
-                  padding: "13px 65px 13px 13px",
-                  border: "1px solid #d5dce5",
-                  borderRadius: "10px",
-                  fontSize: "15px",
-                  boxSizing: "border-box",
-                  outline: "none",
+                  ...inputStyle,
+                  paddingRight: "65px",
+                  marginBottom: 0,
                 }}
               />
 
               <button
                 type="button"
-                onClick={() =>
-                  setShowPassword(!showPassword)
-                }
+                onClick={() => setShowPassword(!showPassword)}
                 style={{
                   position: "absolute",
                   right: "8px",
@@ -363,9 +292,7 @@ function Login() {
               <input
                 type="checkbox"
                 checked={rememberMe}
-                onChange={(e) =>
-                  setRememberMe(e.target.checked)
-                }
+                onChange={(e) => setRememberMe(e.target.checked)}
                 style={{
                   marginRight: "8px",
                   width: "16px",
@@ -382,16 +309,14 @@ function Login() {
               style={{
                 width: "100%",
                 padding: "14px",
-                background:
-                  "linear-gradient(135deg, #1769e0, #287ff0)",
+                background: "linear-gradient(135deg, #1769e0, #287ff0)",
                 color: "#fff",
                 border: "none",
                 borderRadius: "10px",
                 fontSize: "16px",
                 fontWeight: "700",
                 cursor: "pointer",
-                boxShadow:
-                  "0 6px 18px rgba(23, 105, 224, 0.25)",
+                boxShadow: "0 6px 18px rgba(23, 105, 224, 0.25)",
               }}
             >
               LOGIN →
@@ -419,7 +344,7 @@ function Login() {
                 color: "#1769e0",
                 fontWeight: "700",
                 cursor: "pointer",
-                padding: "0",
+                padding: 0,
               }}
             >
               Register

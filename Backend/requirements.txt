@@ -4,4 +4,4 @@ sqlalchemy
 pymysql
 pydantic
 pwdlib[argon2]
-python-dotenv
+python-dotenvgit status

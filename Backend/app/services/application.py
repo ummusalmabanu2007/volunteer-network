@@ -1,8 +1,48 @@
+
+from datetime import date
+
 from fastapi import HTTPException
+from sqlalchemy import func
 from sqlalchemy.orm import Session
+
 from app.models.application import Application
 from app.models.event import Event
-from datetime import date
+
+
+def is_cancelled_status(status):
+    return str(status or "").strip().lower() == "cancelled"
+
+
+def get_active_application_count(db: Session, event_id: int):
+    return (
+        db.query(Application)
+        .filter(
+            Application.Event_ID == event_id,
+            func.lower(
+                func.trim(func.coalesce(Application.Status, ""))
+            ) != "cancelled",
+        )
+        .count()
+    )
+
+
+def refresh_event_status(db: Session, event):
+    if event is None:
+        return
+
+    if event.Date < date.today():
+        event.Status = "Completed"
+        return
+
+    active_count = get_active_application_count(db, event.id)
+
+    if (
+        event.Maximum_Volunteers is not None
+        and active_count >= event.Maximum_Volunteers
+    ):
+        event.Status = "Full"
+    else:
+        event.Status = "Available"
 
 
 def get_applications(db: Session):
@@ -10,146 +50,137 @@ def get_applications(db: Session):
 
 
 def get_application(db: Session, application_id: int):
-    return db.query(Application).filter(
-        Application.Application_ID == application_id
-    ).first()
+    return (
+        db.query(Application)
+        .filter(Application.Application_ID == application_id)
+        .first()
+    )
 
 
 def create_application(db: Session, application):
+    event = (
+        db.query(Event)
+        .filter(Event.id == application.Event_ID)
+        .first()
+    )
 
-    # Check duplicate application
-    existing_application = db.query(Application).filter(
-        Application.Volunteer_ID == application.Volunteer_ID,
-        Application.Event_ID == application.Event_ID,
-        Application.Status != "Cancelled"
-    ).first()
+    if event is None:
+        raise HTTPException(status_code=404, detail="Event not found")
 
-    if existing_application:
-        raise HTTPException(
-            status_code=400,
-            detail="Volunteer has already applied for this event"
-        )
+    refresh_event_status(db, event)
 
-    # Find event
-    event = db.query(Event).filter(
-        Event.id == application.Event_ID
-    ).first()
-
-    if not event:
-        raise HTTPException(
-            status_code=404,
-            detail="Event not found"
-        )
-
-    # Completed event cannot be applied
     if event.Status == "Completed":
+        raise HTTPException(status_code=400, detail="Event is completed")
+
+    existing_applications = (
+        db.query(Application)
+        .filter(
+            Application.Volunteer_ID == application.Volunteer_ID,
+            Application.Event_ID == application.Event_ID,
+        )
+        .all()
+    )
+
+    if any(
+        not is_cancelled_status(item.Status)
+        for item in existing_applications
+    ):
         raise HTTPException(
             status_code=400,
-            detail="Event is completed"
+            detail="Volunteer has already applied for this event",
         )
 
-    # Count only active applications
-    application_count = db.query(Application).filter(
-        Application.Event_ID == application.Event_ID,
-        Application.Status != "Cancelled"
-    ).count()
+    active_count = get_active_application_count(db, event.id)
 
-    # Check maximum volunteers
-    if event.Maximum_Volunteers is not None:
+    if (
+        event.Maximum_Volunteers is not None
+        and active_count >= event.Maximum_Volunteers
+    ):
+        event.Status = "Full"
+        db.commit()
+        raise HTTPException(status_code=400, detail="Event Full")
 
-        if application_count >= event.Maximum_Volunteers:
-            event.Status = "Full"
-            db.commit()
-
-            raise HTTPException(
-                status_code=400,
-                detail="Event Full"
-            )
-
-    # Create application
     new_application = Application(
         Volunteer_ID=application.Volunteer_ID,
         Event_ID=application.Event_ID,
-        Applied_Date=application.Applied_Date,
-        Status=application.Status
+        Applied_Date=application.Applied_Date or date.today(),
+        Status="Pending",
     )
 
-    db.add(new_application)
+    try:
+        db.add(new_application)
+        db.flush()
 
-    # Update event status
-    if event.Maximum_Volunteers is not None:
+        refresh_event_status(db, event)
 
-        if application_count + 1 >= event.Maximum_Volunteers:
-            event.Status = "Full"
-        else:
-            event.Status = "Available"
+        db.commit()
+        db.refresh(new_application)
 
-    db.commit()
-    db.refresh(new_application)
+        return new_application
 
-    return new_application
+    except Exception:
+        db.rollback()
+        raise
 
 
-# Cancel Application
 def cancel_application(
     db: Session,
     application_id: int,
-    volunteer_id: int
+    volunteer_id: int,
 ):
+    application = (
+        db.query(Application)
+        .filter(
+            Application.Application_ID == application_id,
+            Application.Volunteer_ID == volunteer_id,
+        )
+        .first()
+    )
 
-    application = db.query(Application).filter(
-        Application.Application_ID == application_id,
-        Application.Volunteer_ID == volunteer_id
-    ).first()
-
-    if not application:
+    if application is None:
         raise HTTPException(
             status_code=404,
-            detail="Application not found"
+            detail="Application not found",
         )
 
-    # Already cancelled application
-    if application.Status == "Cancelled":
+    if is_cancelled_status(application.Status):
         raise HTTPException(
             status_code=400,
-            detail="Application is already cancelled"
+            detail="Application is already cancelled",
         )
 
-    # Find related event
-    event = db.query(Event).filter(
-        Event.id == application.Event_ID
-    ).first()
+    event = (
+        db.query(Event)
+        .filter(Event.id == application.Event_ID)
+        .first()
+    )
 
-    # Do not allow cancellation after event completion
-    if event and event.Status == "Completed":
+    if event is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Related event not found",
+        )
+
+    refresh_event_status(db, event)
+
+    if event.Status == "Completed":
         raise HTTPException(
             status_code=400,
-            detail="Completed event application cannot be cancelled"
+            detail="Completed event application cannot be cancelled",
         )
 
-    # Mark application as cancelled
-    application.Status = "Cancelled"
-    application.Cancelled_Date = date.today()
+    try:
+        application.Status = "Cancelled"
+        application.Cancelled_Date = date.today()
 
-    # Update event status after cancellation
-    if event:
+        db.flush()
+        refresh_event_status(db, event)
 
-        remaining_applications = db.query(Application).filter(
-            Application.Event_ID == event.id,
-            Application.Application_ID != application_id,
-            Application.Status != "Cancelled"
-        ).count()
+        db.commit()
+        db.refresh(application)
 
-        if event.Maximum_Volunteers is not None:
+        return {"message": "Application cancelled successfully"}
 
-            if remaining_applications < event.Maximum_Volunteers:
-                event.Status = "Available"
-            else:
-                event.Status = "Full"
-
-    db.commit()
-    db.refresh(application)
-
-    return {
-        "message": "Application cancelled successfully"
-    }
+    except Exception:
+        db.rollback()
+        raise

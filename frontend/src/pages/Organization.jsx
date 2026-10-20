@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import Event from "./Event";
 
   
@@ -7,16 +7,16 @@ import Event from "./Event";
 function getEventIcon(eventName) {
   const name = eventName.toLowerCase();
 
-  if (name.includes("tree") || name.includes("plant")) return "🌳";
-  if (name.includes("clean")) return "🧹";
-  if (name.includes("blood")) return "🩸";
-  if (name.includes("food")) return "🍱";
-  if (name.includes("beach")) return "🏖️";
-  if (name.includes("medical") || name.includes("health")) return "🏥";
-  if (name.includes("sports")) return "⚽";
-  if (name.includes("disaster") || name.includes("relief")) return "🚑";
+  if (name.includes("tree") || name.includes("plant")) return "ðŸŒ³";
+  if (name.includes("clean")) return "ðŸ§¹";
+  if (name.includes("blood")) return "ðŸ©¸";
+  if (name.includes("food")) return "ðŸ±";
+  if (name.includes("beach")) return "ðŸ–ï¸";
+  if (name.includes("medical") || name.includes("health")) return "ðŸ¥";
+  if (name.includes("sports")) return "âš½";
+  if (name.includes("disaster") || name.includes("relief")) return "ðŸš‘";
 
-  return "🤝";
+  return "ðŸ¤";
 }
 
 function Organization() {
@@ -48,10 +48,11 @@ function Organization() {
 
   const getAppliedCount = (eventId) => {
     return applications.filter(
-      (application) => application.Event_ID === eventId
+      (application) =>
+        Number(application.Event_ID) === Number(eventId) &&
+        String(application.Status || "").toLowerCase() !== "cancelled"
     ).length;
   };
-
   const handleUpdateMaximum = async (event) => {
     const newMaximum = prompt(
       "Enter Maximum Volunteers:",
@@ -126,7 +127,7 @@ function Organization() {
           textAlign: "center",
         }}
       >
-        <div style={{ fontSize: "45px" }}>🏢</div>
+        <div style={{ fontSize: "45px" }}>ðŸ¢</div>
 
         <h1 style={{ margin: "5px 0", fontSize: "32px" }}>
           Organization Dashboard
@@ -163,7 +164,7 @@ function Organization() {
               boxShadow: "0 5px 18px rgba(0,0,0,0.07)",
             }}
           >
-            <div style={{ fontSize: "32px" }}>📅</div>
+            <div style={{ fontSize: "32px" }}>ðŸ“…</div>
 
             <h2
               style={{
@@ -188,7 +189,7 @@ function Organization() {
               boxShadow: "0 5px 18px rgba(0,0,0,0.07)",
             }}
           >
-            <div style={{ fontSize: "32px" }}>👥</div>
+            <div style={{ fontSize: "32px" }}>ðŸ‘¥</div>
 
             <h2
               style={{
@@ -216,7 +217,7 @@ function Organization() {
           }}
         >
           <h2 style={{ color: "#222", marginTop: 0 }}>
-            ➕ Create New Event
+            âž• Create New Event
           </h2>
 
           <Event />
@@ -224,7 +225,7 @@ function Organization() {
 
         {/* Events */}
         <h2 style={{ marginBottom: "20px" }}>
-          📅 My Created Events
+          ðŸ“… My Created Events
         </h2>
 
         {events.length === 0 ? (
@@ -295,34 +296,34 @@ function Organization() {
                   </h3>
 
                   <p>
-                    <strong>📅 Date:</strong>{" "}
+                    <strong>ðŸ“… Date:</strong>{" "}
                     {event.Date}
                   </p>
 
                   <p>
-                    <strong>📍 Location:</strong>{" "}
+                    <strong>ðŸ“ Location:</strong>{" "}
                     {event.Location}
                   </p>
 
                   <p>
-                    <strong>📝 Description:</strong>{" "}
+                    <strong>ðŸ“ Description:</strong>{" "}
                     {event.Description}
                   </p>
 
                   <hr />
 
                   <p>
-                    <strong>👥 Applied Volunteers:</strong>{" "}
+                    <strong>ðŸ‘¥ Applied Volunteers:</strong>{" "}
                     {appliedCount}
                   </p>
 
                   <p>
-                    <strong>👥 Maximum Volunteers:</strong>{" "}
+                    <strong>ðŸ‘¥ Maximum Volunteers:</strong>{" "}
                     {maximum}
                   </p>
 
                   <p>
-                    <strong>🪑 Available Seats:</strong>{" "}
+                    <strong>ðŸª‘ Available Seats:</strong>{" "}
                     {availableSeats}
                   </p>
 
@@ -363,7 +364,7 @@ function Organization() {
                         cursor: "pointer",
                       }}
                     >
-                      ✏️ Change Maximum Volunteers
+                      âœï¸ Change Maximum Volunteers
                     </button>
                   )}
                 </div>
@@ -391,7 +392,7 @@ function Organization() {
               cursor: "pointer",
             }}
           >
-            🚪 Logout
+            ðŸšª Logout
           </button>
         </div>
       </div>
